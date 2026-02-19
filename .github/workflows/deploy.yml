@@ -41,9 +41,9 @@ jobs:
       - name: SSH to EC2 & Run Containers
         uses: appleboy/ssh-action@v0.1.8
         with:
-          host: ${{ secrets_EC2_IP }}
+          host: ${{ secrets.SECRETS_EC2_IP }}
           username: ubuntu
-          key: ${{ EC2_SSH_KEY }}
+          key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             docker pull 988197903609.dkr.ecr.us-east-1.amazonaws.com/my-backend:latest
             docker pull 988197903609.dkr.ecr.us-east-1.amazonaws.com/my-worker:latest || true
