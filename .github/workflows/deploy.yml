@@ -65,10 +65,12 @@ jobs:
             docker rm redis || true
             docker rm nginx || true
 
-            docker run -d --name redis -p 6379:6379 redis:7
+            docker network create appnet || true
 
-            docker run -d --name backend -p 8501:8501 --env-file /home/ubuntu/.env 988197903609.dkr.ecr.us-east-1.amazonaws.com/my-backend:latest
+            docker run -d --name redis --network appnet -p 6379:6379 redis:7
 
-            docker run -d --name worker --env-file /home/ubuntu/.env 988197903609.dkr.ecr.us-east-1.amazonaws.com/my-worker:latest || true
+            docker run -d --name backend --network appnet -p 8501:8501 --env-file /home/ubuntu/.env -e REDIS_URL=redis://redis:6379 988197903609.dkr.ecr.us-east-1.amazonaws.com/my-backend:latest
+
+            docker run -d --name worker --network appnet --env-file /home/ubuntu/.env -e REDIS_URL=redis://redis:6379 988197903609.dkr.ecr.us-east-1.amazonaws.com/my-worker:latest || true
 
             docker run -d --name nginx -p 80:80 -v /home/ubuntu/frontend:/usr/share/nginx/html nginx:alpine
