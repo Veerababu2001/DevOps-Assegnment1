@@ -45,6 +45,11 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
+
+            # Login to ECR
+            aws ecr get-login-password --region us-east-1 | \
+            docker login --username AWS --password-stdin 988197903609.dkr.ecr.us-east-1.amazonaws.com
+
             docker pull 988197903609.dkr.ecr.us-east-1.amazonaws.com/my-backend:latest
             docker pull 988197903609.dkr.ecr.us-east-1.amazonaws.com/my-worker:latest || true
             docker pull redis:7
