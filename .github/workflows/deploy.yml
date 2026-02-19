@@ -35,7 +35,6 @@ jobs:
           docker tag my-backend:latest 988197903609.dkr.ecr.us-east-1.amazonaws.com/my-backend:latest
           docker push 988197903609.dkr.ecr.us-east-1.amazonaws.com/my-backend:latest
 
-          # Remove below if worker not present
           docker tag my-worker:latest 988197903609.dkr.ecr.us-east-1.amazonaws.com/my-worker:latest
           docker push 988197903609.dkr.ecr.us-east-1.amazonaws.com/my-worker:latest
 
