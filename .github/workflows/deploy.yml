@@ -27,7 +27,6 @@ jobs:
       - name: Build Docker images
         run: |
           docker build -t my-backend:latest ./backend
-
           docker build -f ./backend/Dockerfile.worker -t my-worker:latest ./backend
 
       - name: Tag & Push
@@ -46,15 +45,21 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
 
-            # Login to ECR
+            # ======= NEW: Create Docker network if not exists =======
+            docker network inspect appnet >/dev/null 2>&1 || docker network create appnet
+            echo "Docker network 'appnet' ready"
+
+            # ======= NEW: Login to ECR inside EC2 =======
             aws ecr get-login-password --region us-east-1 | \
             docker login --username AWS --password-stdin 988197903609.dkr.ecr.us-east-1.amazonaws.com
 
+            # ======= Pull images =======
             docker pull 988197903609.dkr.ecr.us-east-1.amazonaws.com/my-backend:latest
             docker pull 988197903609.dkr.ecr.us-east-1.amazonaws.com/my-worker:latest || true
             docker pull redis:7
             docker pull nginx:alpine
 
+            # ======= Stop & remove old containers =======
             docker stop backend || true
             docker stop worker || true
             docker stop redis || true
@@ -65,12 +70,45 @@ jobs:
             docker rm redis || true
             docker rm nginx || true
 
-            docker network create appnet || true
-
+            # ======= Run containers on 'appnet' network =======
             docker run -d --name redis --network appnet -p 6379:6379 redis:7
 
-            docker run -d --name backend --network appnet -p 8501:8501 --env-file /home/ubuntu/.env -e REDIS_URL=redis://redis:6379 988197903609.dkr.ecr.us-east-1.amazonaws.com/my-backend:latest
+            docker run -d --name backend --network appnet -p 8501:8501 \
+              --env-file /home/ubuntu/.env \
+              -e REDIS_URL=redis://redis:6379 \
+              988197903609.dkr.ecr.us-east-1.amazonaws.com/my-backend:latest
 
-            docker run -d --name worker --network appnet --env-file /home/ubuntu/.env -e REDIS_URL=redis://redis:6379 988197903609.dkr.ecr.us-east-1.amazonaws.com/my-worker:latest || true
+            docker run -d --name worker --network appnet \
+              --env-file /home/ubuntu/.env \
+              -e REDIS_URL=redis://redis:6379 \
+              988197903609.dkr.ecr.us-east-1.amazonaws.com/my-worker:latest || true
 
-            docker run -d --name nginx -p 80:80 -v /home/ubuntu/frontend:/usr/share/nginx/html nginx:alpine
+            # ======= NEW: Nginx reverse proxy =======
+            # Create custom config for proxy
+            mkdir -p /home/ubuntu/nginx/conf
+            cat > /home/ubuntu/nginx/conf/default.conf <<EOF
+server {
+    listen 80;
+
+    # Frontend
+    location / {
+        root /usr/share/nginx/html;
+        index index.html;
+    }
+
+    # Backend API proxy
+    location /api/ {
+        proxy_pass http://backend:8501/;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+    }
+}
+EOF
+
+            docker run -d --name nginx --network appnet \
+              -p 80:80 \
+              -v /home/ubuntu/frontend:/usr/share/nginx/html \
+              -v /home/ubuntu/nginx/conf:/etc/nginx/conf.d \
+              nginx:alpine
+
