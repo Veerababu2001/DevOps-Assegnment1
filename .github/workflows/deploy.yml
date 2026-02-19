@@ -27,8 +27,8 @@ jobs:
       - name: Build Docker images
         run: |
           docker build -t my-backend:latest ./backend
-          # Remove below line if worker folder not present
-          docker build -t my-worker:latest ./worker
+
+          docker build -f ./backend/Dockerfile.worker -t my-worker:latest ./backend
 
       - name: Tag & Push
         run: |
