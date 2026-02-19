@@ -2,11 +2,13 @@ name: Deploy
 
 on:
   push:
-    branches: [main]
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -25,6 +27,7 @@ jobs:
       - name: Build Docker images
         run: |
           docker build -t my-backend:latest ./backend
+          # Remove below line if worker folder not present
           docker build -t my-worker:latest ./worker
 
       - name: Tag & Push
@@ -32,36 +35,36 @@ jobs:
           docker tag my-backend:latest 988197903609.dkr.ecr.us-east-1.amazonaws.com/my-backend:latest
           docker push 988197903609.dkr.ecr.us-east-1.amazonaws.com/my-backend:latest
 
+          # Remove below if worker not present
           docker tag my-worker:latest 988197903609.dkr.ecr.us-east-1.amazonaws.com/my-worker:latest
           docker push 988197903609.dkr.ecr.us-east-1.amazonaws.com/my-worker:latest
 
-       - name: SSH to EC2 & Run Containers
-         uses: appleboy/ssh-action@v0.1.8
-         with:
-           host: ${{ secrets.EC2_IP }}
-           username: ubuntu
-           key: ${{ secrets.EC2_SSH_KEY }}
-           script: |
-      # Pull images
-             docker pull 988197903609.dkr.ecr.us-east-1.amazonaws.com/my-backend:latest
-             docker pull 988197903609.dkr.ecr.us-east-1.amazonaws.com/my-worker:latest
-             docker pull redis:7
-             docker pull nginx:alpine
+      - name: SSH to EC2 & Run Containers
+        uses: appleboy/ssh-action@v0.1.8
+        with:
+          host: ${{ secrets.EC2_IP }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            docker pull 988197903609.dkr.ecr.us-east-1.amazonaws.com/my-backend:latest
+            docker pull 988197903609.dkr.ecr.us-east-1.amazonaws.com/my-worker:latest || true
+            docker pull redis:7
+            docker pull nginx:alpine
 
-      # Stop old containers
-             docker stop backend || true
-             docker stop worker || true
-             docker stop redis || true
-             docker stop nginx || true
+            docker stop backend || true
+            docker stop worker || true
+            docker stop redis || true
+            docker stop nginx || true
 
-      # Run Redis
-             docker run -d --name redis -p 6379:6379 redis:7
+            docker rm backend || true
+            docker rm worker || true
+            docker rm redis || true
+            docker rm nginx || true
 
-      # Run Backend
-             docker run -d --name backend -p 8501:8501 --env-file /home/ubuntu/.env 988197903609.dkr.ecr.us-east-1.amazonaws.com/my-backend:latest
+            docker run -d --name redis -p 6379:6379 redis:7
 
-      # Run Worker
-             docker run -d --name worker --env-file /home/ubuntu/.env 988197903609.dkr.ecr.us-east-1.amazonaws.com/my-worker:latest
+            docker run -d --name backend -p 8501:8501 --env-file /home/ubuntu/.env 988197903609.dkr.ecr.us-east-1.amazonaws.com/my-backend:latest
 
-      # Run Nginx
-             docker run -d --name nginx -p 80:80 -v /home/ubuntu/frontend:/usr/share/nginx/html nginx:alpine
+            docker run -d --name worker --env-file /home/ubuntu/.env 988197903609.dkr.ecr.us-east-1.amazonaws.com/my-worker:latest || true
+
+            docker run -d --name nginx -p 80:80 -v /home/ubuntu/frontend:/usr/share/nginx/html nginx:alpine
