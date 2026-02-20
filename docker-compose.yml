@@ -36,7 +36,7 @@ services:
     image: postgres:15
     container_name: postgres
     env_file:
-      - ./backend/.env    # backend lo create chesina DB env vars use chesthunam
+      - ./backend/.env
     ports:
       - "5432:5432"
 

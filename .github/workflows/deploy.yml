@@ -13,7 +13,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      # FRONTEND COPY STEP ADDED HERE 🔹
+
       - name: Copy frontend to EC2
         uses: appleboy/scp-action@v0.1.5
         with:
