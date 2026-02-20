@@ -20,7 +20,7 @@ jobs:
           host: ${{ secrets.SECRETS_EC2_IP }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: "./frontend/*"       
+          source: "./frontend/frontend/*"
           target: "/home/ubuntu/frontend/"
 
       - name: Configure AWS
