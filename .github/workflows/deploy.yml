@@ -20,7 +20,7 @@ jobs:
           host: ${{ secrets.SECRETS_EC2_IP }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: "./frontend/frontend/*"
+          source: "./frontend/*"
           target: "/home/ubuntu/frontend/"
 
       - name: Configure AWS
@@ -83,4 +83,4 @@ jobs:
 
             docker run -d --name worker --network appnet --env-file /home/ubuntu/.env -e REDIS_URL=redis://redis:6379 988197903609.dkr.ecr.us-east-1.amazonaws.com/my-worker:latest || true
 
-            docker run -d --name nginx -p 80:80 -v /home/ubuntu/frontend:/usr/share/nginx/html nginx:alpine
+            docker run -d --name nginx -p 80:80 -v /home/ubuntu/frontend/frontend:/usr/share/nginx/html nginx:alpine
